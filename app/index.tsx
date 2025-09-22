@@ -4,9 +4,12 @@ import { Picker } from "@react-native-picker/picker";
 import * as Location from "expo-location";
 import { Link, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
-import { ActivityIndicator, Button, Image, Platform, Pressable, Text, View } from "react-native";
+import { ActivityIndicator, Button, Platform, Pressable, Text, View } from "react-native";
+import MapPin from "../components/MapPin";
+import { SPORT_COLORS } from "../lib/colors"; // se você tiver esse mapa; senão pode fixar uma cor
 import { SPORTS } from "../lib/sports";
 import { useActivities } from "../store/useActivities";
+
 
 // importa o mapa só no mobile (evita erro no web)
 let MapView: any, Marker: any;
@@ -82,18 +85,29 @@ export default function Home() {
 
         {/* pins vindos do Supabase */}
         {activities.map((a) => (
-          <Marker key={a.id} coordinate={{ latitude: a.lat, longitude: a.lng }}>
-            <View style={{ alignItems: "center" }}>
-              <Image
-                source={SPORT_ICONS[a.sport] || DEFAULT_ICON}
-                style={{ width: 42, height: 42 }}           // 👈 controla tamanho aqui
-                resizeMode="contain"
-              />
-              {/* opcional: label abaixo do ícone */}
-              {/* <Text style={{ fontSize: 11, backgroundColor: "white", paddingHorizontal: 6, borderRadius: 10 }}>{a.sport}</Text> */}
-            </View>
-          </Marker>
-        ))}
+          <Marker
+            key={a.id}
+            coordinate={{ latitude: a.lat, longitude: a.lng }}
+            title={a.title}
+            description={`${new Date(a.starts_at).toLocaleDateString()} ${new Date(a.starts_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`}
+            anchor={{ x: 0.5, y: 1 }}             // 👈 a “ponta” encosta no local
+            tracksViewChanges={false}             // melhora performance após render
+            onPress={() =>
+              router.push({
+                pathname: "/activity/[id]" as const,
+                params: { id: String(a.id) },
+              })
+            }
+          >
+    <MapPin
+      icon={SPORT_ICONS[a.sport] || DEFAULT_ICON}
+      color={SPORT_COLORS?.[a.sport] || "#1976D2"}
+      size={40}                           // ajuste 36–48 conforme seu gosto
+      bg="#FFFFFF"
+      border="#FFFFFF"
+    />
+  </Marker>
+))}
       </MapView>
 
       {/* Filtros (barra flutuante) */}

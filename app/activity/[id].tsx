@@ -1,4 +1,6 @@
 // app/activity/[id].tsx
+import MapPin from "@/components/MapPin";
+import { SPORT_COLORS } from "@/lib/colors";
 import { DEFAULT_ICON, SPORT_ICONS } from "@/lib/sportsIcons";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useMemo, useState } from "react";
@@ -173,9 +175,15 @@ export default function ActivityDetail() {
           >
             <Marker
               coordinate={{ latitude: a.lat, longitude: a.lng }}
-              title={a.title}
-              image={SPORT_ICONS[a.sport] || DEFAULT_ICON}
-            />
+              anchor={{ x: 0.5, y: 1 }}
+              tracksViewChanges={false}
+            >
+              <MapPin
+                icon={SPORT_ICONS[a.sport] || DEFAULT_ICON}
+                color={SPORT_COLORS?.[a.sport] || "#1976D2"}
+                size={36}
+              />
+            </Marker>
           </MapView>
         </View>
       )}
