@@ -6,7 +6,6 @@ type Props = {
   color?: string;            // cor do pin (borda/ponta)
   bg?: string;               // fundo atrás do ícone
   size?: number;             // diâmetro da “bolinha” do pin
-  border?: string;           // cor da borda da bolinha
   onIconLoaded?: () => void; // callback opcional quando o ícone terminar de carregar
   monochromeIcon?: boolean;  // define se o ícone é monocromático e pode receber tintColor
 };
@@ -14,13 +13,11 @@ type Props = {
 type PinStyleOptions = {
   color: string;
   bg?: string;
-  border?: string;
   size: number;
 };
 
-const buildPinStyles = ({ color, bg, border, size }: PinStyleOptions) => {
-  const backgroundColor = bg ?? color;
-  const borderColor = border ?? color;
+const buildPinStyles = ({ color, bg, size }: PinStyleOptions) => {
+  const backgroundColor = bg ?? "#FFFFFF";
 
   return {
     circle: {
@@ -31,7 +28,7 @@ const buildPinStyles = ({ color, bg, border, size }: PinStyleOptions) => {
       alignItems: "center" as const,
       justifyContent: "center" as const,
       borderWidth: 2,
-      borderColor,
+      borderColor: color,
       shadowColor: "#000",
       shadowOpacity: 0.2,
       shadowRadius: 3,
@@ -65,12 +62,11 @@ export default function MapPin({
   color = "#1976D2",
   bg,
   size = 40,
-  border,
   onIconLoaded,
   monochromeIcon = false,
 }: Props) {
-  const fillColor = bg ?? color;
-  const { circle, pointer, ring } = buildPinStyles({ color, bg, border, size });
+  const fillColor = bg ?? "#FFFFFF";
+  const { circle, pointer, ring } = buildPinStyles({ color, bg, size });
 
   const iconStyle = {
     width: size * 0.6,
@@ -109,7 +105,7 @@ export function MapClusterPin({
   size = 48,
   textColor = "#FFFFFF",
 }: ClusterPinProps) {
-  const { circle, pointer, ring } = buildPinStyles({ color, size });
+  const { circle, pointer, ring } = buildPinStyles({ color, bg: color, size });
   const displayCount = count > 999 ? "999+" : String(count);
   const labelLength = displayCount.length;
   const fontSize =
