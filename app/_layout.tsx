@@ -6,9 +6,12 @@ import { useAuth } from "../store/useAuth";
 
 export default function Layout() {
   const router = useRouter();
-  const { session, loading, hydrate, signOut } = useAuth();
+  const { session, loading, hydrate, clearAuthListener, signOut } = useAuth();
 
-  useEffect(() => { hydrate(); }, []);
+  useEffect(() => {
+    void hydrate();
+    return () => clearAuthListener();
+  }, [clearAuthListener, hydrate]);
 
   return (
     <Stack

@@ -6,17 +6,20 @@ import { useAuth } from "../store/useAuth";
 
 export default function AuthScreen() {
   const router = useRouter();
-  const { session, loading, hydrate, signInWithEmail } = useAuth();
+  const { session, loading, hydrate, clearAuthListener, signInWithEmail } = useAuth();
   const [email, setEmail] = useState("");
 
-  useEffect(() => { hydrate(); }, []);
+  useEffect(() => {
+    void hydrate();
+    return () => clearAuthListener();
+  }, [clearAuthListener, hydrate]);
 
   // se já estiver logado, volta
   useEffect(() => {
     if (!loading && session) {
       router.replace("/");
     }
-  }, [loading, session]);
+  }, [loading, router, session]);
 
   async function onSend() {
     if (!email.includes("@")) {
