@@ -75,7 +75,7 @@ export default function MapPin({
   } as const;
 
   return (
-    <View style={{ alignItems: "center" }}>
+    <View style={{ alignItems: "center" }} collapsable={false}>
       {/* “gota” = círculo + ponteiro */}
       <View style={circle}>
         <Image
@@ -118,7 +118,7 @@ export function MapClusterPin({
           : size * 0.42;
 
   return (
-    <View style={{ alignItems: "center" }}>
+    <View style={{ alignItems: "center" }} collapsable={false}>
       <View style={circle}>
         <Text
           style={{
