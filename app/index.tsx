@@ -4,7 +4,7 @@ import { Picker } from "@react-native-picker/picker";
 import * as Location from "expo-location";
 import { Link, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
-import { ActivityIndicator, Button, Image, Platform, Text, View } from "react-native";
+import { ActivityIndicator, Button, Image, Platform, Pressable, Text, View } from "react-native";
 import { SPORTS } from "../lib/sports";
 import { useActivities } from "../store/useActivities";
 
@@ -82,7 +82,7 @@ export default function Home() {
 
         {/* pins vindos do Supabase */}
         {activities.map((a) => (
-          <Marker coordinate={{ latitude: a.lat, longitude: a.lng }}>
+          <Marker key={a.id} coordinate={{ latitude: a.lat, longitude: a.lng }}>
             <View style={{ alignItems: "center" }}>
               <Image
                 source={SPORT_ICONS[a.sport] || DEFAULT_ICON}
@@ -112,14 +112,36 @@ export default function Home() {
       >
         {/* Chips de período */}
         <View style={{ flexDirection: "row", gap: 8, justifyContent: "space-between" }}>
-          {([1, 7, 30] as const).map((opt) => (
-            <Button
-              key={opt}
-              title={opt === 1 ? "Hoje" : `${opt}d`}
-              onPress={() => setDays(opt)}
-              color={days === opt ? "#1976D2" : "#9E9E9E"} // sempre string
-            />
-          ))}
+          {([1, 7, 30] as const).map((opt) => {
+            const isActive = days === opt;
+            return (
+              <Pressable
+                key={opt}
+                onPress={() => setDays(opt)}
+                style={({ pressed }) => [
+                  {
+                    flex: 1,
+                    paddingVertical: 10,
+                    borderRadius: 8,
+                    alignItems: "center",
+                    justifyContent: "center",
+                    backgroundColor: "#E0E0E0",
+                    opacity: pressed ? 0.85 : 1,
+                  },
+                  isActive && { backgroundColor: "#1976D2" },
+                ]}
+              >
+                <Text
+                  style={{
+                    color: isActive ? "#FFFFFF" : "#424242",
+                    fontWeight: "600",
+                  }}
+                >
+                  {opt === 1 ? "Hoje" : `${opt}d`}
+                </Text>
+              </Pressable>
+            );
+          })}
         </View>
 
         {/* Picker de esporte */}
