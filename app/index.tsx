@@ -156,6 +156,9 @@ export default function Home() {
     latitudeDelta: 0.08,
     longitudeDelta: 0.08,
   });
+  const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(
+    null
+  );
   const [locLoading, setLocLoading] = useState(true);
   const [markerIconsLoaded, setMarkerIconsLoaded] = useState<Record<string, boolean>>({});
 
@@ -217,10 +220,14 @@ export default function Home() {
       const { status } = await Location.requestForegroundPermissionsAsync();
       if (status === "granted") {
         const loc = await Location.getCurrentPositionAsync({});
-        setRegion((r) => ({
-          ...r,
+        const nextLocation = {
           latitude: loc.coords.latitude,
           longitude: loc.coords.longitude,
+        };
+        setUserLocation(nextLocation);
+        setRegion((r) => ({
+          ...r,
+          ...nextLocation,
         }));
       }
       setLocLoading(false);
@@ -261,7 +268,12 @@ export default function Home() {
         onRegionChangeComplete={handleRegionChangeComplete}
       >
         {/* pin da sua localização (visual) */}
-        <Marker coordinate={{ latitude: region.latitude, longitude: region.longitude }} title="Você está aqui" />
+        <Marker
+          coordinate={
+            userLocation ?? { latitude: region.latitude, longitude: region.longitude }
+          }
+          title="Você está aqui"
+        />
 
         {/* pins vindos do Supabase (com clustering) */}
         {clusterItems.map((item) => {
