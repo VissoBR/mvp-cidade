@@ -13,20 +13,23 @@ type Props = {
 export default function MapPin({
   icon,
   color = "#1976D2",
-  bg = "#FFFFFF",
+  bg,
   size = 40,
-  border = "#FFFFFF",
+  border,
   onIconLoaded,
 }: Props) {
+  const backgroundColor = bg ?? color;
+  const borderColor = border ?? color;
+
   const circle = {
     width: size,
     height: size,
     borderRadius: size / 2,
-    backgroundColor: bg,
+    backgroundColor,
     alignItems: "center" as const,
     justifyContent: "center" as const,
     borderWidth: 2,
-    borderColor: border,
+    borderColor,
     // sombra sutil (iOS/Android)
     shadowColor: "#000",
     shadowOpacity: 0.2,
@@ -56,13 +59,19 @@ export default function MapPin({
     backgroundColor: "rgba(0,0,0,0.15)",
   };
 
+  const iconStyle = {
+    width: size * 0.6,
+    height: size * 0.6,
+    tintColor: backgroundColor === color ? "#FFFFFF" : undefined,
+  } as const;
+
   return (
     <View style={{ alignItems: "center" }}>
       {/* “gota” = círculo + ponteiro */}
-      <View style={[circle, { borderColor: color }]}>
+      <View style={circle}>
         <Image
           source={icon}
-          style={{ width: size * 0.6, height: size * 0.6 }}
+          style={iconStyle}
           resizeMode="contain"
           onLoad={() => onIconLoaded?.()}
         />
