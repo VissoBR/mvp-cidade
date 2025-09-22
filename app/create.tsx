@@ -28,30 +28,20 @@ export default function Create() {
   const [coords, setCoords] = useState<{ lat: number; lng: number }>({ lat: -22.9, lng: -43.2 });
   const [saving, setSaving] = useState(false);
 
-  const [days, setDays] = useState<1 | 7 | 30>(7);
-  const [sportFilter, setSportFilter] = useState<string | undefined>(undefined);
-
   // Pegar GPS para posicionar o MapPicker inicialmente
   useEffect(() => {
     (async () => {
       const { status } = await Location.requestForegroundPermissionsAsync();
       if (status === "granted") {
         const loc = await Location.getCurrentPositionAsync({});
-        setRegion((r) => ({ ...r, latitude: loc.coords.latitude, longitude: loc.coords.longitude }));
-    }
-    setLocLoading(false);
+        setCoords((prev) => ({
+          ...prev,
+          lat: loc.coords.latitude,
+          lng: loc.coords.longitude,
+        }));
+      }
     })();
   }, []);
-
-  // carrega atividades quando filtros mudam + assina realtime
-  useEffect(() => {
-    let unsub = () => {};
-    (async() => {
-      await fetchUpcoming(days, sportFilter);
-      unsub = subscribeRealtime();
-    })();
-    return() => unsub();
-  }, [days, sportFilter]);
 
   // Helpers de data/hora
   const formatDate = (d: Date) =>
@@ -182,20 +172,5 @@ export default function Create() {
       </ScrollView>
     </KeyboardAvoidingView>
   );
-}
-function setRegion(arg0: (r: any) => any) {
-  throw new Error("Function not implemented.");
-}
-
-function setLocLoading(arg0: boolean) {
-  throw new Error("Function not implemented.");
-}
-
-function fetchUpcoming(days: number, sportFilter: string | undefined) {
-  throw new Error("Function not implemented.");
-}
-
-function subscribeRealtime(): () => void {
-  throw new Error("Function not implemented.");
 }
 
