@@ -34,6 +34,7 @@ export default function ActivityDetail() {
 
   const [a, setA] = useState<Activity | null>(null);
   const [loading, setLoading] = useState(true);
+  const [iconLoaded, setIconLoaded] = useState(false);
 
   // contadores
   const [goingCount, setGoingCount] = useState(0);
@@ -44,6 +45,7 @@ export default function ActivityDetail() {
 
   async function loadActivity() {
     setLoading(true);
+    setIconLoaded(false);
     const { data, error } = await supabase.from("activities").select("*").eq("id", id).single();
     if (error) Alert.alert("Erro", error.message);
     setA(data as Activity);
@@ -176,12 +178,13 @@ export default function ActivityDetail() {
             <Marker
               coordinate={{ latitude: a.lat, longitude: a.lng }}
               anchor={{ x: 0.5, y: 1 }}
-              tracksViewChanges={false}
+              tracksViewChanges={!iconLoaded}
             >
               <MapPin
                 icon={SPORT_ICONS[a.sport] || DEFAULT_ICON}
                 color={SPORT_COLORS?.[a.sport] || "#1976D2"}
                 size={36}
+                onIconLoaded={() => setIconLoaded(true)}
               />
             </Marker>
           </MapView>

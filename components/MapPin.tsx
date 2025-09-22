@@ -7,6 +7,7 @@ type Props = {
   bg?: string;               // fundo atrás do ícone
   size?: number;             // diâmetro da “bolinha” do pin
   border?: string;           // cor da borda da bolinha
+  onIconLoaded?: () => void; // callback opcional quando o ícone terminar de carregar
 };
 
 export default function MapPin({
@@ -15,6 +16,7 @@ export default function MapPin({
   bg = "#FFFFFF",
   size = 40,
   border = "#FFFFFF",
+  onIconLoaded,
 }: Props) {
   const circle = {
     width: size,
@@ -58,7 +60,12 @@ export default function MapPin({
     <View style={{ alignItems: "center" }}>
       {/* “gota” = círculo + ponteiro */}
       <View style={[circle, { borderColor: color }]}>
-        <Image source={icon} style={{ width: size * 0.6, height: size * 0.6 }} resizeMode="contain" />
+        <Image
+          source={icon}
+          style={{ width: size * 0.6, height: size * 0.6 }}
+          resizeMode="contain"
+          onLoad={() => onIconLoaded?.()}
+        />
       </View>
       <View style={pointer} />
       {/* sombra no chão (oval) */}
