@@ -1,4 +1,5 @@
 // app/activity/[id].tsx
+import { DEFAULT_ICON, SPORT_ICONS } from "@/lib/sportsIcons";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useMemo, useState } from "react";
 import { ActivityIndicator, Alert, Button, Platform, ScrollView, Share, Text, View } from "react-native";
@@ -170,7 +171,11 @@ export default function ActivityDetail() {
               latitudeDelta: 0.02, longitudeDelta: 0.02
             }}
           >
-            <Marker coordinate={{ latitude: a.lat, longitude: a.lng }} title={a.title} />
+            <Marker
+              coordinate={{ latitude: a.lat, longitude: a.lng }}
+              title={a.title}
+              image={SPORT_ICONS[a.sport] || DEFAULT_ICON}
+            />
           </MapView>
         </View>
       )}

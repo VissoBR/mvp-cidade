@@ -1,10 +1,10 @@
 // app/index.tsx
-import { SPORT_COLORS } from "@/lib/colors";
+import { DEFAULT_ICON, SPORT_ICONS } from "@/lib/sportsIcons";
 import { Picker } from "@react-native-picker/picker";
 import * as Location from "expo-location";
 import { Link, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
-import { ActivityIndicator, Button, Platform, Text, View } from "react-native";
+import { ActivityIndicator, Button, Image, Platform, Text, View } from "react-native";
 import { SPORTS } from "../lib/sports";
 import { useActivities } from "../store/useActivities";
 
@@ -82,19 +82,17 @@ export default function Home() {
 
         {/* pins vindos do Supabase */}
         {activities.map((a) => (
-          <Marker
-            key={a.id}
-            coordinate={{ latitude: a.lat, longitude: a.lng }}
-            title={a.title}
-            description={`${new Date(a.starts_at).toLocaleDateString()} ${new Date(a.starts_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`}
-            pinColor={SPORT_COLORS[a.sport] || "#E53935"}
-            onPress={() =>
-              router.push({
-                pathname: "/activity/[id]" as const,
-                params: { id: String(a.id) },
-              })
-            }
-          />
+          <Marker coordinate={{ latitude: a.lat, longitude: a.lng }}>
+            <View style={{ alignItems: "center" }}>
+              <Image
+                source={SPORT_ICONS[a.sport] || DEFAULT_ICON}
+                style={{ width: 42, height: 42 }}           // 👈 controla tamanho aqui
+                resizeMode="contain"
+              />
+              {/* opcional: label abaixo do ícone */}
+              {/* <Text style={{ fontSize: 11, backgroundColor: "white", paddingHorizontal: 6, borderRadius: 10 }}>{a.sport}</Text> */}
+            </View>
+          </Marker>
         ))}
       </MapView>
 
