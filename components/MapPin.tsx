@@ -8,6 +8,7 @@ type Props = {
   size?: number;             // diâmetro da “bolinha” do pin
   border?: string;           // cor da borda da bolinha
   onIconLoaded?: () => void; // callback opcional quando o ícone terminar de carregar
+  monochromeIcon?: boolean;  // define se o ícone é monocromático e pode receber tintColor
 };
 
 export default function MapPin({
@@ -17,6 +18,7 @@ export default function MapPin({
   size = 40,
   border,
   onIconLoaded,
+  monochromeIcon = false,
 }: Props) {
   const backgroundColor = bg ?? color;
   const borderColor = border ?? color;
@@ -62,7 +64,8 @@ export default function MapPin({
   const iconStyle = {
     width: size * 0.6,
     height: size * 0.6,
-    tintColor: backgroundColor === color ? "#FFFFFF" : undefined,
+    tintColor:
+      monochromeIcon && backgroundColor === color ? "#FFFFFF" : undefined,
   } as const;
 
   return (
