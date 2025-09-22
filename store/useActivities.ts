@@ -11,12 +11,17 @@ type NewActivity = {
   lng: number;
 };
 
+type SubscriptionFilters = {
+  days: number;
+  sport?: string;
+};
+
 type State = {
   activities: Activity[];
   loading: boolean;
   fetchUpcoming: (days: number, sport?: string) => Promise<void>;
   createActivity: (input: NewActivity) => Promise<string | undefined>;
-  subscribeRealtime: () => () => void;
+  subscribeRealtime: (filters: SubscriptionFilters) => () => void;
 };
 
 export const useActivities = create<State>((set, get) => ({
@@ -71,13 +76,15 @@ export const useActivities = create<State>((set, get) => ({
     return id;
   },
 
-  subscribeRealtime() {
+  subscribeRealtime({ days, sport }: SubscriptionFilters) {
     const ch = supabase
       .channel("activities-changes")
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "activities" },
-        () => { get().fetchUpcoming(7); }
+        () => {
+          get().fetchUpcoming(days, sport);
+        }
       )
       .subscribe();
 
