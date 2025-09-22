@@ -3,12 +3,13 @@ import { DEFAULT_ICON, SPORT_ICONS } from "@/lib/sportsIcons";
 import { Picker } from "@react-native-picker/picker";
 import * as Location from "expo-location";
 import { Link, useRouter } from "expo-router";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ActivityIndicator, Button, Platform, Pressable, Text, View } from "react-native";
-import MapPin from "../components/MapPin";
+import MapPin, { MapClusterPin } from "../components/MapPin";
 import { SPORT_COLORS } from "../lib/colors"; // se você tiver esse mapa; senão pode fixar uma cor
 import { SPORTS } from "../lib/sports";
 import { useActivities } from "../store/useActivities";
+import type { Activity as ActivityType } from "../lib/supabase";
 
 
 // importa o mapa só no mobile (evita erro no web)
@@ -19,10 +20,137 @@ if (Platform.OS !== "web") {
   Marker = RNMaps.Marker;
 }
 
+type MapRegion = {
+  latitude: number;
+  longitude: number;
+  latitudeDelta: number;
+  longitudeDelta: number;
+};
+
+type ClusterItem =
+  | {
+      type: "cluster";
+      id: string;
+      coordinate: { latitude: number; longitude: number };
+      count: number;
+      activities: ActivityType[];
+      span: { latitudeDelta: number; longitudeDelta: number };
+    }
+  | { type: "activity"; activity: ActivityType };
+
+type ClusterGroup = Extract<ClusterItem, { type: "cluster" }>;
+
+const CLUSTERING_CONFIG = {
+  minDeltaToCluster: 0.012,
+  radiusFactor: 0.22,
+  zoomStep: 0.55,
+  clusterZoomPadding: 1.6,
+  minZoomDelta: 0.003,
+};
+
+const REGION_EPSILON = 0.00001;
+
+const ensureMinDelta = (value: number) => Math.max(value, CLUSTERING_CONFIG.minZoomDelta);
+
+const regionsAreClose = (a: MapRegion, b: MapRegion) =>
+  Math.abs(a.latitude - b.latitude) < REGION_EPSILON &&
+  Math.abs(a.longitude - b.longitude) < REGION_EPSILON &&
+  Math.abs(a.latitudeDelta - b.latitudeDelta) < REGION_EPSILON &&
+  Math.abs(a.longitudeDelta - b.longitudeDelta) < REGION_EPSILON;
+
+const buildActivityClusters = (activities: ActivityType[], region: MapRegion): ClusterItem[] => {
+  if (!activities.length) {
+    return [];
+  }
+
+  const baseDelta = Math.max(region.latitudeDelta, region.longitudeDelta);
+  const safeDelta = Math.max(baseDelta, CLUSTERING_CONFIG.minZoomDelta);
+
+  if (safeDelta <= CLUSTERING_CONFIG.minDeltaToCluster) {
+    return activities.map((activity) => ({ type: "activity", activity }));
+  }
+
+  const distanceThreshold = safeDelta * CLUSTERING_CONFIG.radiusFactor;
+  const clusters: { coordinate: { latitude: number; longitude: number }; activities: ActivityType[] }[] = [];
+
+  activities.forEach((activity) => {
+    let match = false;
+
+    for (const cluster of clusters) {
+      const latDiff = Math.abs(cluster.coordinate.latitude - activity.lat);
+      const lngDiff = Math.abs(cluster.coordinate.longitude - activity.lng);
+
+      if (latDiff <= distanceThreshold && lngDiff <= distanceThreshold) {
+        cluster.activities.push(activity);
+        const count = cluster.activities.length;
+        cluster.coordinate.latitude += (activity.lat - cluster.coordinate.latitude) / count;
+        cluster.coordinate.longitude += (activity.lng - cluster.coordinate.longitude) / count;
+        match = true;
+        break;
+      }
+    }
+
+    if (!match) {
+      clusters.push({
+        coordinate: { latitude: activity.lat, longitude: activity.lng },
+        activities: [activity],
+      });
+    }
+  });
+
+  const clusterItems: ClusterItem[] = [];
+
+  clusters.forEach((cluster) => {
+    if (cluster.activities.length <= 1) {
+      clusterItems.push({ type: "activity", activity: cluster.activities[0] });
+      return;
+    }
+
+    const ids = cluster.activities.map((item) => item.id).sort();
+    const latitudes = cluster.activities.map((item) => item.lat);
+    const longitudes = cluster.activities.map((item) => item.lng);
+    const minLat = Math.min(...latitudes);
+    const maxLat = Math.max(...latitudes);
+    const minLng = Math.min(...longitudes);
+    const maxLng = Math.max(...longitudes);
+
+    clusterItems.push({
+      type: "cluster",
+      id: `cluster-${ids.join("-")}`,
+      coordinate: cluster.coordinate,
+      count: cluster.activities.length,
+      activities: cluster.activities,
+      span: {
+        latitudeDelta: maxLat - minLat,
+        longitudeDelta: maxLng - minLng,
+      },
+    });
+  });
+
+  return clusterItems;
+};
+
+const computeClusterZoomRegion = (cluster: ClusterGroup, region: MapRegion): MapRegion => {
+  const paddedLat = ensureMinDelta(cluster.span.latitudeDelta * CLUSTERING_CONFIG.clusterZoomPadding);
+  const paddedLng = ensureMinDelta(cluster.span.longitudeDelta * CLUSTERING_CONFIG.clusterZoomPadding);
+
+  return {
+    latitude: cluster.coordinate.latitude,
+    longitude: cluster.coordinate.longitude,
+    latitudeDelta: ensureMinDelta(
+      Math.min(region.latitudeDelta * CLUSTERING_CONFIG.zoomStep, paddedLat)
+    ),
+    longitudeDelta: ensureMinDelta(
+      Math.min(region.longitudeDelta * CLUSTERING_CONFIG.zoomStep, paddedLng)
+    ),
+  };
+};
+
 export default function Home() {
   const router = useRouter();
+  const mapRef = useRef<any>(null);
 
-  const [region, setRegion] = useState({
+  const [region, setRegion] = useState<MapRegion>({
     latitude: -22.9,
     longitude: -43.2,
     latitudeDelta: 0.08,
@@ -38,6 +166,11 @@ export default function Home() {
   // store: busca e realtime
   const { activities, fetchUpcoming, loading, subscribeRealtime } = useActivities();
 
+  const clusterItems = useMemo(
+    () => buildActivityClusters(activities, region),
+    [activities, region]
+  );
+
   const handleMarkerIconLoaded = useCallback((activityId: string) => {
     setMarkerIconsLoaded((prev) => {
       if (prev[activityId]) {
@@ -46,6 +179,19 @@ export default function Home() {
       return { ...prev, [activityId]: true };
     });
   }, []);
+
+  const handleRegionChangeComplete = useCallback((nextRegion: MapRegion) => {
+    setRegion((current) => (regionsAreClose(current, nextRegion) ? current : nextRegion));
+  }, []);
+
+  const handleClusterPress = useCallback(
+    (cluster: ClusterGroup) => {
+      const nextRegion = computeClusterZoomRegion(cluster, region);
+      mapRef.current?.animateToRegion(nextRegion, 280);
+      setRegion(nextRegion);
+    },
+    [region]
+  );
 
   useEffect(() => {
     setMarkerIconsLoaded((prev) => {
@@ -107,34 +253,59 @@ export default function Home() {
 
   return (
     <View style={{ flex: 1 }}>
-      <MapView style={{ flex: 1 }} initialRegion={region} region={region}>
+      <MapView
+        ref={mapRef}
+        style={{ flex: 1 }}
+        initialRegion={region}
+        region={region}
+        onRegionChangeComplete={handleRegionChangeComplete}
+      >
         {/* pin da sua localização (visual) */}
         <Marker coordinate={{ latitude: region.latitude, longitude: region.longitude }} title="Você está aqui" />
 
-        {/* pins vindos do Supabase */}
-        {activities.map((a) => (
-          <Marker
-            key={a.id}
-            coordinate={{ latitude: a.lat, longitude: a.lng }}
-            title={a.title}
-            description={`${new Date(a.starts_at).toLocaleDateString()} ${new Date(a.starts_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`}
-            anchor={{ x: 0.5, y: 1 }} // 👈 a “ponta” encosta no local
-            tracksViewChanges={!markerIconsLoaded[a.id]} // mantém tracking até o ícone aparecer
-            onPress={() =>
-              router.push({
-                pathname: "/activity/[id]" as const,
-                params: { id: String(a.id) },
-              })
-            }
-          >
-            <MapPin
-              icon={SPORT_ICONS[a.sport] || DEFAULT_ICON}
-              color={SPORT_COLORS?.[a.sport] || "#1976D2"}
-              size={40} // ajuste 36–48 conforme seu gosto
-              onIconLoaded={() => handleMarkerIconLoaded(a.id)}
-            />
-          </Marker>
-        ))}
+        {/* pins vindos do Supabase (com clustering) */}
+        {clusterItems.map((item) => {
+          if (item.type === "cluster") {
+            return (
+              <Marker
+                key={item.id}
+                coordinate={item.coordinate}
+                anchor={{ x: 0.5, y: 1 }}
+                tracksViewChanges={false}
+                title={`${item.count} atividades próximas`}
+                description="Toque para aproximar"
+                onPress={() => handleClusterPress(item)}
+              >
+                <MapClusterPin count={item.count} />
+              </Marker>
+            );
+          }
+
+          const a = item.activity;
+          return (
+            <Marker
+              key={a.id}
+              coordinate={{ latitude: a.lat, longitude: a.lng }}
+              title={a.title}
+              description={`${new Date(a.starts_at).toLocaleDateString()} ${new Date(a.starts_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`}
+              anchor={{ x: 0.5, y: 1 }} // 👈 a “ponta” encosta no local
+              tracksViewChanges={!markerIconsLoaded[a.id]} // mantém tracking até o ícone aparecer
+              onPress={() =>
+                router.push({
+                  pathname: "/activity/[id]" as const,
+                  params: { id: String(a.id) },
+                })
+              }
+            >
+              <MapPin
+                icon={SPORT_ICONS[a.sport] || DEFAULT_ICON}
+                color={SPORT_COLORS?.[a.sport] || "#1976D2"}
+                size={40} // ajuste 36–48 conforme seu gosto
+                onIconLoaded={() => handleMarkerIconLoaded(a.id)}
+              />
+            </Marker>
+          );
+        })}
       </MapView>
 
       {/* Filtros (barra flutuante) */}
