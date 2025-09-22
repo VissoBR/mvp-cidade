@@ -131,8 +131,6 @@ export default function Home() {
               icon={SPORT_ICONS[a.sport] || DEFAULT_ICON}
               color={SPORT_COLORS?.[a.sport] || "#1976D2"}
               size={40} // ajuste 36–48 conforme seu gosto
-              bg="#FFFFFF"
-              border="#FFFFFF"
               onIconLoaded={() => handleMarkerIconLoaded(a.id)}
             />
           </Marker>
