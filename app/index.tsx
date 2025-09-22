@@ -86,7 +86,7 @@ export default function Home() {
     let unsub = () => {};
     (async () => {
       await fetchUpcoming(days, sportFilter);
-      unsub = subscribeRealtime();
+      unsub = subscribeRealtime({ days, sport: sportFilter });
     })();
     return () => unsub();
   }, [days, sportFilter]);
