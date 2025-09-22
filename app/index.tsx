@@ -140,7 +140,7 @@ export default function Home() {
       </View>
 
       {/* botão flutuante para criar atividade */}
-      <View style={{ position: "absolute", bottom: 20, right: 12 }}>
+      <View style={{ position: "absolute", bottom: 30, right: 12 }}>
         <Link href="/create" asChild>
           <Button title="+ Criar" />
         </Link>
