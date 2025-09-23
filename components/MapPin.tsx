@@ -1,21 +1,28 @@
 // components/MapPin.tsx
+import type { ReactNode } from "react";
 import { Text, View } from "react-native";
 
 type PinStyleOptions = {
   color: string;
-  bg?: string;
+  backgroundColor?: string;
+  ringColor?: string;
   size: number;
 };
 
-const buildPinStyles = ({ color, bg, size }: PinStyleOptions) => {
-  const backgroundColor = bg ?? "#FFFFFF";
+const buildPinStyles = ({
+  color,
+  backgroundColor,
+  ringColor,
+  size,
+}: PinStyleOptions) => {
+  const fillColor = backgroundColor ?? color;
 
   return {
     circle: {
       width: size,
       height: size,
       borderRadius: size / 2,
-      backgroundColor,
+      backgroundColor: fillColor,
       alignItems: "center" as const,
       justifyContent: "center" as const,
       borderWidth: 2,
@@ -43,10 +50,41 @@ const buildPinStyles = ({ color, bg, size }: PinStyleOptions) => {
       width: size * 0.6,
       height: size * 0.18,
       borderRadius: size,
-      backgroundColor: "rgba(0,0,0,0.15)",
+      backgroundColor: ringColor ?? "rgba(0,0,0,0.15)",
     },
   } as const;
 };
+
+type MapPinBaseProps = {
+  color: string;
+  backgroundColor?: string;
+  ringColor?: string;
+  size?: number;
+  children?: ReactNode;
+};
+
+export function MapPinBase({
+  color,
+  backgroundColor,
+  ringColor,
+  size = 40,
+  children,
+}: MapPinBaseProps) {
+  const { circle, pointer, ring } = buildPinStyles({
+    color,
+    backgroundColor,
+    ringColor,
+    size,
+  });
+
+  return (
+    <View style={{ alignItems: "center" }} collapsable={false}>
+      <View style={circle}>{children}</View>
+      <View style={pointer} />
+      <View style={ring} />
+    </View>
+  );
+}
 
 type ClusterPinProps = {
   count: number;
@@ -61,7 +99,6 @@ export function MapClusterPin({
   size = 48,
   textColor = "#FFFFFF",
 }: ClusterPinProps) {
-  const { circle, pointer, ring } = buildPinStyles({ color, bg: color, size });
   const displayCount = count > 999 ? "999+" : String(count);
   const labelLength = displayCount.length;
   const fontSize =
@@ -74,20 +111,16 @@ export function MapClusterPin({
           : size * 0.42;
 
   return (
-    <View style={{ alignItems: "center" }} collapsable={false}>
-      <View style={circle}>
-        <Text
-          style={{
-            color: textColor,
-            fontWeight: "700",
-            fontSize,
-          }}
-        >
-          {displayCount}
-        </Text>
-      </View>
-      <View style={pointer} />
-      <View style={ring} />
-    </View>
+    <MapPinBase color={color} backgroundColor={color} size={size}>
+      <Text
+        style={{
+          color: textColor,
+          fontWeight: "700",
+          fontSize,
+        }}
+      >
+        {displayCount}
+      </Text>
+    </MapPinBase>
   );
 }
