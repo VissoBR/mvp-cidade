@@ -12,7 +12,7 @@ import {
   Text,
   View,
 } from "react-native";
-import { MapClusterPin, MapPinBase } from "../components/MapPin";
+import { MapClusterPin } from "../components/MapPin";
 import { SPORT_COLORS } from "../lib/colors"; // se você tiver esse mapa; senão pode fixar uma cor
 import { SPORTS } from "../lib/sports";
 import { useActivities } from "../store/useActivities";
@@ -288,15 +288,14 @@ export default function Home() {
               description={`${new Date(a.starts_at).toLocaleDateString()} ${new Date(a.starts_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`}
               anchor={{ x: 0.5, y: 1 }} // 👈 a “ponta” encosta no local
               tracksViewChanges={false}
+              pinColor={sportColor}
               onPress={() =>
                 router.push({
                   pathname: "/activity/[id]" as const,
                   params: { id: String(a.id) },
                 })
               }
-            >
-              <MapPinBase color={sportColor} backgroundColor={sportColor} />
-            </Marker>
+            />
           );
         })}
       </MapView>
