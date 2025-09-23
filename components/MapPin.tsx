@@ -2,7 +2,7 @@
 import type { ReactNode } from "react";
 import { Text, View } from "react-native";
 import { SPORT_COLORS } from "../lib/colors";
-import type { ActivityType } from "../lib/supabase";
+import type { Activity as ActivityType } from "../lib/supabase";
 
 type PinStyleOptions = {
   color: string;
