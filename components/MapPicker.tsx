@@ -1,4 +1,5 @@
 // components/MapPicker.tsx
+import { useEffect, useRef } from "react";
 import { Platform, View } from "react-native";
 
 let MapView: any, Marker: any;
@@ -15,6 +16,43 @@ type Props = {
 };
 
 export default function MapPicker({ value, onChange, initialRegion }: Props) {
+  const mapRef = useRef<any>(null);
+  const hasCenteredOnInitialValue = useRef(false);
+  const defaultLatitudeDelta = 0.02;
+  const defaultLongitudeDelta = 0.02;
+
+  const fallbackRegion = {
+    latitude: value.lat,
+    longitude: value.lng,
+    latitudeDelta: defaultLatitudeDelta,
+    longitudeDelta: defaultLongitudeDelta,
+  };
+
+  const latitudeDelta = initialRegion?.latitudeDelta ?? defaultLatitudeDelta;
+  const longitudeDelta = initialRegion?.longitudeDelta ?? defaultLongitudeDelta;
+
+  useEffect(() => {
+    if (Platform.OS === "web") {
+      return;
+    }
+
+    if (!mapRef.current) {
+      return;
+    }
+
+    if (!hasCenteredOnInitialValue.current) {
+      hasCenteredOnInitialValue.current = true;
+      return;
+    }
+
+    mapRef.current.animateToRegion({
+      latitude: value.lat,
+      longitude: value.lng,
+      latitudeDelta,
+      longitudeDelta,
+    });
+  }, [value.lat, value.lng, latitudeDelta, longitudeDelta]);
+
   if (Platform.OS === "web") {
     // No web, só um placeholder
     return <View style={{ height: 200, backgroundColor: "#eee", borderRadius: 8 }} />;
@@ -23,15 +61,9 @@ export default function MapPicker({ value, onChange, initialRegion }: Props) {
   return (
     <View style={{ height: 240, borderRadius: 8, overflow: "hidden" }}>
       <MapView
+        ref={mapRef}
         style={{ flex: 1 }}
-        initialRegion={
-          initialRegion || {
-            latitude: value.lat,
-            longitude: value.lng,
-            latitudeDelta: 0.02,
-            longitudeDelta: 0.02,
-          }
-        }
+        initialRegion={initialRegion || fallbackRegion}
         onLongPress={(e: any) => {
           const { latitude, longitude } = e.nativeEvent.coordinate;
           onChange({ lat: latitude, lng: longitude });
