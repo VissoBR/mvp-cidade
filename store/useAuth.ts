@@ -75,7 +75,9 @@ export const useAuth = create<AuthState>((set, get) => ({
 
   async signInWithEmail(email: string) {
     // envia magic link; ao clicar no e-mail no celular, volta para o app via scheme
-    const redirectTo = Linking.createURL("/auth-callback");
+    const redirectTo = Linking.createURL("/auth-callback", {
+      scheme: "mvpcidade",
+    });
     const { error } = await supabase.auth.signInWithOtp({
       email,
       options: {
