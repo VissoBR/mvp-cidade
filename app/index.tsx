@@ -2,14 +2,13 @@
 import { DEFAULT_ICON, SPORT_ICONS } from "@/lib/sportsIcons";
 import { Picker } from "@react-native-picker/picker";
 import * as Location from "expo-location";
-import { Link, Redirect, useRouter } from "expo-router";
+import { Link, useRouter } from "expo-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ActivityIndicator, Button, Platform, Pressable, Text, View } from "react-native";
 import MapPin, { MapClusterPin } from "../components/MapPin";
 import { SPORT_COLORS } from "../lib/colors"; // se você tiver esse mapa; senão pode fixar uma cor
 import { SPORTS } from "../lib/sports";
 import { useActivities } from "../store/useActivities";
-import { useAuth } from "../store/useAuth";
 import type { Activity as ActivityType } from "../lib/supabase";
 
 
@@ -149,7 +148,6 @@ const computeClusterZoomRegion = (cluster: ClusterGroup, region: MapRegion): Map
 
 export default function Home() {
   const router = useRouter();
-  const { session, loading: authLoading } = useAuth();
   const mapRef = useRef<any>(null);
 
   const [region, setRegion] = useState<MapRegion>({
@@ -238,29 +236,13 @@ export default function Home() {
 
   // recarregar quando filtros mudarem + assinar realtime
   useEffect(() => {
-    if (authLoading || !session) {
-      return;
-    }
-
     let unsub = () => {};
     (async () => {
       await fetchUpcoming(days, sportFilter);
       unsub = subscribeRealtime({ days, sport: sportFilter });
     })();
     return () => unsub();
-  }, [authLoading, days, fetchUpcoming, session, sportFilter, subscribeRealtime]);
-
-  if (authLoading) {
-    return (
-      <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
-        <ActivityIndicator />
-      </View>
-    );
-  }
-
-  if (!session) {
-    return <Redirect href="/auth" />;
-  }
+  }, [days, fetchUpcoming, sportFilter, subscribeRealtime]);
 
   // mensagem amigável se abrir no navegador por engano
   if (Platform.OS === "web") {

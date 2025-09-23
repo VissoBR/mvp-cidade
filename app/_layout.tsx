@@ -1,28 +1,11 @@
 // app/_layout.tsx
-import { Stack, useRouter } from "expo-router";
-import { useEffect } from "react";
-import { Button } from "react-native";
-import { useAuth } from "../store/useAuth";
+import { Stack } from "expo-router";
 
 export default function Layout() {
-  const router = useRouter();
-  const { session, loading, hydrate, clearAuthListener, signOut } = useAuth();
-
-  useEffect(() => {
-    void hydrate();
-    return () => clearAuthListener();
-  }, [clearAuthListener, hydrate]);
-
   return (
     <Stack
       screenOptions={{
         headerTitle: "Onde tem Esporte?",
-        headerRight: () =>
-          loading ? null : session ? (
-            <Button title="Sair" onPress={signOut} />
-          ) : (
-            <Button title="Entrar" onPress={() => router.push("/auth")} />
-          ),
       }}
     />
   );
