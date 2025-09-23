@@ -266,7 +266,7 @@ export default function Home() {
               <Marker
                 key={item.id}
                 coordinate={item.coordinate}
-                anchor={{ x: 0.5, y: 1 }}
+                anchor={{ x: 0.5, y: 0.5 }}
                 tracksViewChanges={false}
                 title={`${item.count} atividades próximas`}
                 description="Toque para aproximar"
