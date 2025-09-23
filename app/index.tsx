@@ -1,11 +1,10 @@
 // app/index.tsx
-import { DEFAULT_ICON, SPORT_ICONS } from "@/lib/sportsIcons";
 import { Picker } from "@react-native-picker/picker";
 import * as Location from "expo-location";
 import { Link, useRouter } from "expo-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ActivityIndicator, Button, Platform, Pressable, Text, View } from "react-native";
-import MapPin, { MapClusterPin } from "../components/MapPin";
+import { MapClusterPin } from "../components/MapPin";
 import { SPORT_COLORS } from "../lib/colors"; // se você tiver esse mapa; senão pode fixar uma cor
 import { SPORTS } from "../lib/sports";
 import { useActivities } from "../store/useActivities";
@@ -160,7 +159,6 @@ export default function Home() {
     null
   );
   const [locLoading, setLocLoading] = useState(true);
-  const [markerIconsLoaded, setMarkerIconsLoaded] = useState<Record<string, boolean>>({});
 
   // filtros
   const [days, setDays] = useState<1 | 7 | 30>(7);
@@ -174,15 +172,6 @@ export default function Home() {
     [activities, region]
   );
 
-  const handleMarkerIconLoaded = useCallback((activityId: string) => {
-    setMarkerIconsLoaded((prev) => {
-      if (prev[activityId]) {
-        return prev;
-      }
-      return { ...prev, [activityId]: true };
-    });
-  }, []);
-
   const handleRegionChangeComplete = useCallback((nextRegion: MapRegion) => {
     setRegion((current) => (regionsAreClose(current, nextRegion) ? current : nextRegion));
   }, []);
@@ -195,24 +184,6 @@ export default function Home() {
     },
     [region]
   );
-
-  useEffect(() => {
-    setMarkerIconsLoaded((prev) => {
-      const currentIds = new Set(activities.map((activity) => activity.id));
-      let removed = false;
-      const next: Record<string, boolean> = {};
-
-      Object.keys(prev).forEach((id) => {
-        if (currentIds.has(id)) {
-          next[id] = prev[id];
-        } else {
-          removed = true;
-        }
-      });
-
-      return removed ? next : prev;
-    });
-  }, [activities]);
 
   // pegar localização uma vez
   useEffect(() => {
@@ -301,21 +272,14 @@ export default function Home() {
               title={a.title}
               description={`${new Date(a.starts_at).toLocaleDateString()} ${new Date(a.starts_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`}
               anchor={{ x: 0.5, y: 1 }} // 👈 a “ponta” encosta no local
-              tracksViewChanges={!markerIconsLoaded[a.id]} // mantém tracking até o ícone aparecer
+              pinColor={SPORT_COLORS[a.sport] ?? "#1976D2"}
               onPress={() =>
                 router.push({
                   pathname: "/activity/[id]" as const,
                   params: { id: String(a.id) },
                 })
               }
-            >
-              <MapPin
-                icon={SPORT_ICONS[a.sport] || DEFAULT_ICON}
-                color={SPORT_COLORS?.[a.sport] || "#1976D2"}
-                size={40} // ajuste 36–48 conforme seu gosto
-                onIconLoaded={() => handleMarkerIconLoaded(a.id)}
-              />
-            </Marker>
+            />
           );
         })}
       </MapView>
