@@ -1,4 +1,5 @@
 // store/useAuth.ts
+import * as Linking from "expo-linking";
 import { create } from "zustand";
 import { supabase } from "../lib/supabase";
 
@@ -74,10 +75,11 @@ export const useAuth = create<AuthState>((set, get) => ({
 
   async signInWithEmail(email: string) {
     // envia magic link; ao clicar no e-mail no celular, volta para o app via scheme
+    const redirectTo = Linking.createURL("/auth-callback");
     const { error } = await supabase.auth.signInWithOtp({
       email,
       options: {
-        emailRedirectTo: "mvpcidade://auth-callback",
+        emailRedirectTo: redirectTo,
       },
     });
     if (error) throw new Error(error.message);
