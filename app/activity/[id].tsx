@@ -32,6 +32,7 @@ export default function ActivityDetail() {
 
   const [a, setA] = useState<Activity | null>(null);
   const [loading, setLoading] = useState(true);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   // contadores
   const [goingCount, setGoingCount] = useState(0);
@@ -44,10 +45,31 @@ export default function ActivityDetail() {
 
   const loadActivity = useCallback(async () => {
     setLoading(true);
-    const { data, error } = await supabase.from("activities").select("*").eq("id", id).single();
-    if (error) Alert.alert("Erro", error.message);
-    setA(data as Activity);
-    setLoading(false);
+    setErrorMessage(null);
+
+    try {
+      const { data, error } = await supabase.from("activities").select("*").eq("id", id).single();
+
+      if (error) {
+        setErrorMessage(error.message ?? "Erro ao carregar atividade.");
+        setA(null);
+        return;
+      }
+
+      if (!data) {
+        setErrorMessage("Atividade não encontrada.");
+        setA(null);
+        return;
+      }
+
+      setA(data as Activity);
+    } catch (e) {
+      const message = e instanceof Error ? e.message : "Erro ao carregar atividade.";
+      setErrorMessage(message);
+      setA(null);
+    } finally {
+      setLoading(false);
+    }
   }, [id]);
 
   async function shareActivity() {
@@ -243,12 +265,28 @@ export default function ActivityDetail() {
     // contadores via realtime
   }
 
-  if (loading || !a) {
+  if (loading) {
     return (
       <View style={{ flex:1, alignItems:"center", justifyContent:"center" }}>
         <ActivityIndicator />
       </View>
     );
+  }
+
+  if (errorMessage) {
+    return (
+      <View style={{ flex: 1, padding: 16, alignItems: "center", justifyContent: "center", gap: 12 }}>
+        <Text style={{ fontSize: 16, textAlign: "center", color: "#37474F" }}>{errorMessage}</Text>
+        <View style={{ width: "100%", gap: 8 }}>
+          <Button title="Tentar novamente" onPress={loadActivity} />
+          <Button title="Voltar ao mapa" onPress={() => router.replace("/")} />
+        </View>
+      </View>
+    );
+  }
+
+  if (!a) {
+    return null;
   }
 
   return (
