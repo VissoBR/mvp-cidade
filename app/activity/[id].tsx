@@ -3,8 +3,8 @@ import MapPin from "@/components/MapPin";
 import { SPORT_COLORS } from "@/lib/colors";
 import { DEFAULT_ICON, SPORT_ICONS } from "@/lib/sportsIcons";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { useEffect, useMemo, useState } from "react";
-import { ActivityIndicator, Alert, Button, Platform, ScrollView, Share, Text, View } from "react-native";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { ActivityIndicator, Alert, Button, Platform, Pressable, ScrollView, Share, Text, View } from "react-native";
 import { supabase } from "../../lib/supabase";
 
 
@@ -40,41 +40,43 @@ export default function ActivityDetail() {
   const [goingCount, setGoingCount] = useState(0);
   const [interestedCount, setInterestedCount] = useState(0);
   const [likesCount, setLikesCount] = useState(0);
+  const [attendanceStatus, setAttendanceStatus] = useState<"going" | "interested" | null>(null);
+  const [liked, setLiked] = useState(false);
 
   const when = useMemo(() => a ? new Date(a.starts_at) : null, [a]);
 
-  async function loadActivity() {
+  const loadActivity = useCallback(async () => {
     setLoading(true);
     setIconLoaded(false);
     const { data, error } = await supabase.from("activities").select("*").eq("id", id).single();
     if (error) Alert.alert("Erro", error.message);
     setA(data as Activity);
     setLoading(false);
-  }
+  }, [id]);
 
   async function shareActivity() {
-  if (!a) return;
-  const when = new Date(a.starts_at);
-  const date = when.toLocaleDateString();
-  const time = when.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+    if (!a) return;
+    const when = new Date(a.starts_at);
+    const date = when.toLocaleDateString();
+    const time = when.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 
-  const deepLink = `mvpcidade://activity/${a.id}`;
+    const deepLink = `mvpcidade://activity/${a.id}`;
 
-  const message =
-    `Vamos nessa?\n` +
-    `Atividade: ${a.title} (${a.sport})\n` +
-    `Quando: ${date} ${time}\n` +
-    `Onde: https://maps.google.com/?q=${a.lat},${a.lng}\n` +
-    `Abrir no app: ${deepLink}`;
+    const message =
+      `Vamos nessa?\n` +
+      `Atividade: ${a.title} (${a.sport})\n` +
+      `Quando: ${date} ${time}\n` +
+      `Onde: https://maps.google.com/?q=${a.lat},${a.lng}\n` +
+      `Abrir no app: ${deepLink}`;
 
-  try {
-    await Share.share({ message });
-  } catch (e) {
-    console.warn("Erro ao compartilhar", e);
+    try {
+      await Share.share({ message });
+    } catch (e) {
+      console.warn("Erro ao compartilhar", e);
+    }
   }
-}
 
-  async function loadCounters() {
+  const loadCounters = useCallback(async () => {
     // going
     const g = await supabase
       .from("attendances")
@@ -97,11 +99,48 @@ export default function ActivityDetail() {
       .select("*", { count: "exact", head: true })
       .eq("activity_id", id);
     setLikesCount(lk.count || 0);
-  }
+  }, [id]);
+
+  const loadUserStatus = useCallback(async () => {
+    const { data: sessionData } = await supabase.auth.getSession();
+    const uid = sessionData.session?.user?.id;
+    if (!uid) {
+      setAttendanceStatus(null);
+      setLiked(false);
+      return;
+    }
+
+    const { data: attendanceData, error: attendanceError } = await supabase
+      .from("attendances")
+      .select("status")
+      .eq("activity_id", id)
+      .eq("user_id", uid)
+      .maybeSingle();
+
+    if (attendanceError) {
+      console.warn("Erro ao carregar participação", attendanceError.message);
+    }
+
+    setAttendanceStatus(attendanceData?.status ?? null);
+
+    const { data: likeData, error: likeError } = await supabase
+      .from("likes")
+      .select("id")
+      .eq("activity_id", id)
+      .eq("user_id", uid)
+      .maybeSingle();
+
+    if (likeError) {
+      console.warn("Erro ao carregar curtida", likeError.message);
+    }
+
+    setLiked(!!likeData);
+  }, [id]);
 
   useEffect(() => {
     loadActivity();
     loadCounters();
+    loadUserStatus();
 
     // realtime: sempre que mudar attendances/likes dessa activity, recarrega contadores
     const ch = supabase
@@ -111,7 +150,7 @@ export default function ActivityDetail() {
       .subscribe();
 
     return () => { supabase.removeChannel(ch); };
-  }, [id]);
+  }, [id, loadActivity, loadCounters, loadUserStatus]);
 
   // ações (por enquanto pedem login)
   async function requireLogin(): Promise<string | null> {
@@ -129,8 +168,49 @@ export default function ActivityDetail() {
   async function markAttendance(status: "going" | "interested") {
     const uid = await requireLogin();
     if (!uid) return;
+
+    const previous = attendanceStatus;
+
+    if (previous === status) {
+      const { error } = await supabase
+        .from("attendances")
+        .delete()
+        .eq("activity_id", id)
+        .eq("user_id", uid);
+
+      if (error) {
+        Alert.alert("Erro", error.message);
+        return;
+      }
+
+      setAttendanceStatus(null);
+      if (status === "going") {
+        setGoingCount((count) => Math.max(0, count - 1));
+      } else {
+        setInterestedCount((count) => Math.max(0, count - 1));
+      }
+      return;
+    }
+
     const { error } = await supabase.from("attendances").upsert({ activity_id: id, user_id: uid, status });
-    if (error) Alert.alert("Erro", error.message);
+    if (error) {
+      Alert.alert("Erro", error.message);
+      return;
+    }
+
+    setAttendanceStatus(status);
+
+    if (status === "going") {
+      setGoingCount((count) => count + (previous === "going" ? 0 : 1));
+      if (previous === "interested") {
+        setInterestedCount((count) => Math.max(0, count - 1));
+      }
+    } else {
+      setInterestedCount((count) => count + (previous === "interested" ? 0 : 1));
+      if (previous === "going") {
+        setGoingCount((count) => Math.max(0, count - 1));
+      }
+    }
     // contadores atualizam via realtime
   }
 
@@ -138,17 +218,32 @@ export default function ActivityDetail() {
     const uid = await requireLogin();
     if (!uid) return;
 
-    // tenta deletar se já existe; se não existir, insere
-    const exists = await supabase
-      .from("likes")
-      .select("id", { count: "exact" })
-      .eq("activity_id", id)
-      .eq("user_id", uid);
-    if ((exists.count || 0) > 0) {
-      await supabase.from("likes").delete().eq("activity_id", id).eq("user_id", uid);
-    } else {
-      await supabase.from("likes").insert({ activity_id: id, user_id: uid });
+    if (liked) {
+      const { error } = await supabase
+        .from("likes")
+        .delete()
+        .eq("activity_id", id)
+        .eq("user_id", uid);
+
+      if (error) {
+        Alert.alert("Erro", error.message);
+        return;
+      }
+
+      setLiked(false);
+      setLikesCount((count) => Math.max(0, count - 1));
+      return;
     }
+
+    const { error } = await supabase.from("likes").insert({ activity_id: id, user_id: uid });
+
+    if (error) {
+      Alert.alert("Erro", error.message);
+      return;
+    }
+
+    setLiked(true);
+    setLikesCount((count) => count + 1);
     // contadores via realtime
   }
 
@@ -193,10 +288,18 @@ export default function ActivityDetail() {
 
       <View style={{ flexDirection:"row", gap:8, justifyContent:"space-between" }}>
         <View style={{ flex:1 }}>
-          <Button title={`Vou (${goingCount})`} onPress={() => markAttendance("going")} />
+          <SelectionButton
+            selected={attendanceStatus === "going"}
+            title={`Vou (${goingCount})`}
+            onPress={() => markAttendance("going")}
+          />
         </View>
         <View style={{ flex:1 }}>
-          <Button title={`Interesse (${interestedCount})`} onPress={() => markAttendance("interested")} />
+          <SelectionButton
+            selected={attendanceStatus === "interested"}
+            title={`Interesse (${interestedCount})`}
+            onPress={() => markAttendance("interested")}
+          />
         </View>
       </View>
       <View style={{ marginTop: 8 }}>
@@ -205,12 +308,47 @@ export default function ActivityDetail() {
 
 
       <View>
-        <Button title={`Curtir (${likesCount})`} onPress={toggleLike} />
+        <SelectionButton
+          selected={liked}
+          title={`Curtir (${likesCount})`}
+          onPress={toggleLike}
+        />
       </View>
 
       <View style={{ marginTop: 8 }}>
         <Button title="Voltar ao mapa" onPress={() => router.replace("/")} />
       </View>
     </ScrollView>
+  );
+}
+
+type SelectionButtonProps = {
+  selected: boolean;
+  title: string;
+  onPress: () => void;
+};
+
+function SelectionButton({ selected, title, onPress }: SelectionButtonProps) {
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityState={{ selected }}
+      style={({ pressed }) => ({
+        paddingVertical: 12,
+        paddingHorizontal: 16,
+        borderRadius: 9999,
+        borderWidth: 1,
+        borderColor: selected ? "#1976D2" : "#CFD8DC",
+        backgroundColor: selected ? "#1976D2" : "#FFFFFF",
+        alignItems: "center",
+        justifyContent: "center",
+        opacity: pressed ? 0.85 : 1,
+      })}
+    >
+      <Text style={{ color: selected ? "#FFFFFF" : "#1976D2", fontWeight: "600" }}>
+        {selected ? `✓ ${title}` : title}
+      </Text>
+    </Pressable>
   );
 }
