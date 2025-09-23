@@ -178,6 +178,7 @@ export default function Home() {
 
   // store: busca e realtime
   const { activities, fetchUpcoming, loading, subscribeRealtime } = useActivities();
+  const activityLabel = activities.length === 1 ? "atividade" : "atividades";
 
   const clusterItems = useMemo(
     () => buildActivityClusters(activities, region),
@@ -362,7 +363,9 @@ export default function Home() {
         </View>
 
         {/* Contador */}
-        <Text style={{ textAlign: "right", color: "#555" }}>{activities.length} atividade(s)</Text>
+        <Text style={{ textAlign: "right", color: "#555" }}>
+          {activities.length} {activityLabel}
+        </Text>
       </View>
 
       {/* botão flutuante para criar atividade */}
