@@ -1,7 +1,6 @@
 // components/MapPin.tsx
 import type { ReactNode } from "react";
 import { Text, View } from "react-native";
-import { SPORT_COLORS } from "../lib/colors";
 import type { Activity as ActivityType } from "../lib/supabase";
 
 type PinStyleOptions = {
@@ -90,49 +89,44 @@ export function MapPinBase({
 
 type ClusterPinProps = {
   count: number;
-  color?: string;
-  size?: number;
-  textColor?: string;
   activities?: ActivityType[];
 };
 
-export function MapClusterPin({
-  count,
-  color = "#1976D2",
-  size = 48,
-  textColor = "#FFFFFF",
-  activities,
-}: ClusterPinProps) {
-  const uniqueSports = new Set(activities?.map((a) => a.sport));
-  const singleSport = uniqueSports.size === 1 ? Array.from(uniqueSports)[0] : undefined;
-  const computedColor =
-    uniqueSports.size > 1
-      ? "#FF3B30"
-      : singleSport
-        ? SPORT_COLORS[singleSport] ?? color
-        : color;
+export function MapClusterPin({ count }: ClusterPinProps) {
+  const size = count >= 100 ? 60 : count >= 10 ? 50 : 40;
   const displayCount = count > 999 ? "999+" : String(count);
   const labelLength = displayCount.length;
   const fontSize =
     labelLength >= 4
-      ? size * 0.28
+      ? size * 0.32
       : labelLength === 3
-        ? size * 0.32
-        : labelLength === 2
-          ? size * 0.36
-          : size * 0.42;
+        ? size * 0.36
+        : size * 0.4;
 
   return (
-    <MapPinBase color={computedColor} backgroundColor={computedColor} size={size}>
+    <View
+      style={{
+        width: size,
+        height: size,
+        backgroundColor: "#FFFFFF",
+        borderWidth: 3,
+        borderColor: "#FF0000",
+        borderRadius: size / 2,
+        justifyContent: "center",
+        alignItems: "center",
+      }}
+      collapsable={false}
+    >
       <Text
         style={{
-          color: textColor,
+          color: "#000000",
           fontWeight: "700",
           fontSize,
+          textAlign: "center",
         }}
       >
         {displayCount}
       </Text>
-    </MapPinBase>
+    </View>
   );
 }
