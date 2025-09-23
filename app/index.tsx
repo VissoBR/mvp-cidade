@@ -220,12 +220,21 @@ export default function Home() {
 
   // recarregar quando filtros mudarem + assinar realtime
   useEffect(() => {
-    let unsub = () => {};
+    let active = true;
+    const unsubscribe = subscribeRealtime({ days, sport: sportFilter });
+
     (async () => {
+      if (!active) {
+        return;
+      }
+
       await fetchUpcoming(days, sportFilter);
-      unsub = subscribeRealtime({ days, sport: sportFilter });
     })();
-    return () => unsub();
+
+    return () => {
+      active = false;
+      unsubscribe();
+    };
   }, [days, fetchUpcoming, sportFilter, subscribeRealtime]);
 
   // mensagem amigável se abrir no navegador por engano
