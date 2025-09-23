@@ -3,7 +3,15 @@ import { Picker } from "@react-native-picker/picker";
 import * as Location from "expo-location";
 import { Link, useRouter } from "expo-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ActivityIndicator, Button, Platform, Pressable, Text, View } from "react-native";
+import {
+  ActivityIndicator,
+  Button,
+  Dimensions,
+  Platform,
+  Pressable,
+  Text,
+  View,
+} from "react-native";
 import { MapClusterPin } from "../components/MapPin";
 import { SPORT_COLORS } from "../lib/colors"; // se você tiver esse mapa; senão pode fixar uma cor
 import { SPORTS } from "../lib/sports";
@@ -41,10 +49,10 @@ type ClusterGroup = Extract<ClusterItem, { type: "cluster" }>;
 
 const CLUSTERING_CONFIG = {
   minDeltaToCluster: 0.012,
-  radiusFactor: 0.22,
   zoomStep: 0.55,
   clusterZoomPadding: 1.6,
   minZoomDelta: 0.003,
+  clusterRadiusPx: 50,
 };
 
 const REGION_EPSILON = 0.00001;
@@ -69,7 +77,11 @@ const buildActivityClusters = (activities: ActivityType[], region: MapRegion): C
     return activities.map((activity) => ({ type: "activity", activity }));
   }
 
-  const distanceThreshold = safeDelta * CLUSTERING_CONFIG.radiusFactor;
+  const safeLatDelta = ensureMinDelta(region.latitudeDelta);
+  const safeLngDelta = ensureMinDelta(region.longitudeDelta);
+  const { width, height } = Dimensions.get("window");
+  const latThreshold = (safeLatDelta / height) * CLUSTERING_CONFIG.clusterRadiusPx;
+  const lngThreshold = (safeLngDelta / width) * CLUSTERING_CONFIG.clusterRadiusPx;
   const clusters: { coordinate: { latitude: number; longitude: number }; activities: ActivityType[] }[] = [];
 
   activities.forEach((activity) => {
@@ -79,7 +91,7 @@ const buildActivityClusters = (activities: ActivityType[], region: MapRegion): C
       const latDiff = Math.abs(cluster.coordinate.latitude - activity.lat);
       const lngDiff = Math.abs(cluster.coordinate.longitude - activity.lng);
 
-      if (latDiff <= distanceThreshold && lngDiff <= distanceThreshold) {
+      if (latDiff <= latThreshold && lngDiff <= lngThreshold) {
         cluster.activities.push(activity);
         const count = cluster.activities.length;
         cluster.coordinate.latitude += (activity.lat - cluster.coordinate.latitude) / count;
