@@ -1,7 +1,5 @@
 // app/activity/[id].tsx
-import MapPin from "@/components/MapPin";
 import { SPORT_COLORS } from "@/lib/colors";
-import { DEFAULT_ICON, SPORT_ICONS } from "@/lib/sportsIcons";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { ActivityIndicator, Alert, Button, Platform, Pressable, ScrollView, Share, Text, View } from "react-native";
@@ -34,7 +32,6 @@ export default function ActivityDetail() {
 
   const [a, setA] = useState<Activity | null>(null);
   const [loading, setLoading] = useState(true);
-  const [iconLoaded, setIconLoaded] = useState(false);
 
   // contadores
   const [goingCount, setGoingCount] = useState(0);
@@ -47,7 +44,6 @@ export default function ActivityDetail() {
 
   const loadActivity = useCallback(async () => {
     setLoading(true);
-    setIconLoaded(false);
     const { data, error } = await supabase.from("activities").select("*").eq("id", id).single();
     if (error) Alert.alert("Erro", error.message);
     setA(data as Activity);
@@ -273,15 +269,8 @@ export default function ActivityDetail() {
             <Marker
               coordinate={{ latitude: a.lat, longitude: a.lng }}
               anchor={{ x: 0.5, y: 1 }}
-              tracksViewChanges={!iconLoaded}
-            >
-              <MapPin
-                icon={SPORT_ICONS[a.sport] || DEFAULT_ICON}
-                color={SPORT_COLORS?.[a.sport] || "#1976D2"}
-                size={36}
-                onIconLoaded={() => setIconLoaded(true)}
-              />
-            </Marker>
+              pinColor={SPORT_COLORS[a.sport] ?? "#1976D2"}
+            />
           </MapView>
         </View>
       )}

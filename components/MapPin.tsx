@@ -1,14 +1,5 @@
 // components/MapPin.tsx
-import { Image, Text, View } from "react-native";
-
-type Props = {
-  icon: any;                 // require(...) do PNG
-  color?: string;            // cor do pin (borda/ponta)
-  bg?: string;               // fundo atrás do ícone
-  size?: number;             // diâmetro da “bolinha” do pin
-  onIconLoaded?: () => void; // callback opcional quando o ícone terminar de carregar
-  monochromeIcon?: boolean;  // define se o ícone é monocromático e pode receber tintColor
-};
+import { Text, View } from "react-native";
 
 type PinStyleOptions = {
   color: string;
@@ -56,41 +47,6 @@ const buildPinStyles = ({ color, bg, size }: PinStyleOptions) => {
     },
   } as const;
 };
-
-export default function MapPin({
-  icon,
-  color = "#1976D2",
-  bg,
-  size = 40,
-  onIconLoaded,
-  monochromeIcon = false,
-}: Props) {
-  const fillColor = bg ?? "#FFFFFF";
-  const { circle, pointer, ring } = buildPinStyles({ color, bg, size });
-
-  const iconStyle = {
-    width: size * 0.6,
-    height: size * 0.6,
-    tintColor: monochromeIcon && fillColor === color ? "#FFFFFF" : undefined,
-  } as const;
-
-  return (
-    <View style={{ alignItems: "center" }} collapsable={false}>
-      {/* “gota” = círculo + ponteiro */}
-      <View style={circle}>
-        <Image
-          source={icon}
-          style={iconStyle}
-          resizeMode="contain"
-          onLoad={() => onIconLoaded?.()}
-        />
-      </View>
-      <View style={pointer} />
-      {/* sombra no chão (oval) */}
-      <View style={ring} />
-    </View>
-  );
-}
 
 type ClusterPinProps = {
   count: number;
