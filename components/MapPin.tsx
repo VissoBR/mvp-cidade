@@ -1,6 +1,8 @@
 // components/MapPin.tsx
 import type { ReactNode } from "react";
 import { Text, View } from "react-native";
+import { SPORT_COLORS } from "../lib/colors";
+import type { ActivityType } from "../lib/supabase";
 
 type PinStyleOptions = {
   color: string;
@@ -91,6 +93,7 @@ type ClusterPinProps = {
   color?: string;
   size?: number;
   textColor?: string;
+  activities?: ActivityType[];
 };
 
 export function MapClusterPin({
@@ -98,7 +101,16 @@ export function MapClusterPin({
   color = "#1976D2",
   size = 48,
   textColor = "#FFFFFF",
+  activities,
 }: ClusterPinProps) {
+  const uniqueSports = new Set(activities?.map((a) => a.sport));
+  const singleSport = uniqueSports.size === 1 ? Array.from(uniqueSports)[0] : undefined;
+  const computedColor =
+    uniqueSports.size > 1
+      ? "#FF3B30"
+      : singleSport
+        ? SPORT_COLORS[singleSport] ?? color
+        : color;
   const displayCount = count > 999 ? "999+" : String(count);
   const labelLength = displayCount.length;
   const fontSize =
@@ -111,7 +123,7 @@ export function MapClusterPin({
           : size * 0.42;
 
   return (
-    <MapPinBase color={color} backgroundColor={color} size={size}>
+    <MapPinBase color={computedColor} backgroundColor={computedColor} size={size}>
       <Text
         style={{
           color: textColor,
