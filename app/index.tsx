@@ -272,7 +272,7 @@ export default function Home() {
                 description="Toque para aproximar"
                 onPress={() => handleClusterPress(item)}
               >
-                <MapClusterPin count={item.count} />
+                <MapClusterPin count={item.count} activities={item.activities} />
               </Marker>
             );
           }
